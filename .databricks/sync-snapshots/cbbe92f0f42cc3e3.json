@@ -1,0 +1,29 @@
+{
+  "version": "v1",
+  "host": "https://adb-2824599842151189.9.azuredatabricks.net",
+  "remote_path": "/Workspace/Users/aaloliveira@toyota.com.br/databricks_apps/toyapartsrecognition_2026_04_22-22_30/flask-hello-world-app",
+  "last_modified_times": {
+    ".gitattributes": "2026-04-22T19:36:16.3427056-03:00",
+    "app.py": "2026-04-22T20:41:52.7723921-03:00",
+    "app.yaml": "2026-04-22T19:43:53.8306739-03:00",
+    "imagefunctions.py": "2026-04-22T20:09:35.0761584-03:00",
+    "requirements.txt": "2026-04-22T19:43:55.1950227-03:00",
+    "templates/index.html": "2026-04-22T20:38:21.2561998-03:00"
+  },
+  "local_to_remote_names": {
+    ".gitattributes": ".gitattributes",
+    "app.py": "app.py",
+    "app.yaml": "app.yaml",
+    "imagefunctions.py": "imagefunctions.py",
+    "requirements.txt": "requirements.txt",
+    "templates/index.html": "templates/index.html"
+  },
+  "remote_to_local_names": {
+    ".gitattributes": ".gitattributes",
+    "app.py": "app.py",
+    "app.yaml": "app.yaml",
+    "imagefunctions.py": "imagefunctions.py",
+    "requirements.txt": "requirements.txt",
+    "templates/index.html": "templates/index.html"
+  }
+}
