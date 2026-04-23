@@ -9,31 +9,8 @@
     <h1>Identificador de peças</h1>
     <input type="file" id="fileInput" accept="image/*">
 
-    <input type="number" name="" id="numro1" placeholder="Número 1">
-    <input type="number" name="" id="numro2" placeholder="Número2">
-    <button id="sendButton">Enviar</button>
 
     <script>
-        document.getElementById('sendButton').addEventListener('click', function() {
-            const numro1 = document.getElementById('numro1').value;
-            const numro2 = document.getElementById('numro2').value;
-
-            fetch('/receivenumbers', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ numro1: numro1, numro2: numro2 })
-            })
-            .then(response => response.json())
-            .then(data => {
-                console.log('Success:', data);
-            })
-            .catch((error) => {
-                console.error('Error:', error);
-            });
-        });
-
         document.getElementById('fileInput').addEventListener('change', function(event) {
             const file = event.target.files[0];
             if (file) {

@@ -31,12 +31,12 @@ def receive_image():
     data = request.get_json()
     if not data or 'image' not in data:
         return {'error': 'No image provided'}, 400
-    image_data = data['image']
+    image_data = data['image'].split(',', 1)[1]
     try:
         image_bytes = base64.b64decode(image_data)
     except Exception as e:
         return {'error': 'Invalid image data'}, 400
-    filename = f"received_image_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
+    filename = f"images/received_image_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
     with open(filename, 'wb') as f:
         f.write(image_bytes)
     return {'message': 'Image saved', 'filename': filename}, 200
