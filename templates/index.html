@@ -1,21 +1,30 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
 </head>
+
 <body>
-    <h1>Identificador de peças</h1>
-    <input type="file" id="fileInput" accept="image/*">
+
+    <div>
+        <h1>Identificador de peças</h1>
+        <input type="file" id="fileInput" accept="image/*">
+    </div>
+
+
+    <hr>
+
 
 
     <script>
-        document.getElementById('fileInput').addEventListener('change', function(event) {
+        document.getElementById('fileInput').addEventListener('change', function (event) {
             const file = event.target.files[0];
             if (file) {
                 const reader = new FileReader();
-                reader.onload = function(e) {
+                reader.onload = function (e) {
                     const imageData = e.target.result;
                     fetch('/receiveimage', {
                         method: 'POST',
@@ -24,18 +33,18 @@
                         },
                         body: JSON.stringify({ image: imageData })
                     })
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log('Success:', data);
-                    })
-                    .catch((error) => {
-                        console.error('Error:', error);
-                    });
+                        .then(response => response.json())
+                        .then(data => {
+                            console.log('Success:', data);
+                        })
+                        .catch((error) => {
+                            console.error('Error:', error);
+                        });
                 };
                 reader.readAsDataURL(file);
             }
         });
     </script>
 </body>
-</html>
 
+</html>
