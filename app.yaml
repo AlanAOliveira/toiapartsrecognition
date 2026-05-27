@@ -1,6 +1,15 @@
-command: [
-  "flask",
-  "--app",
-  "app.py",
-  "run"
-]
+command:
+  - "gunicorn"
+  - "app:app"
+  - "--bind"
+  - "0.0.0.0:8000"
+  - "--workers"
+  - "2"
+  - "--timeout"
+  - "120"
+
+env:
+  - name: "USE_MLFLOW"
+    value: "false"
+  - name: "FLASK_RUN_PORT"
+    value: "8000"

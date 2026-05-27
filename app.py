@@ -1,63 +1,126 @@
 import pandas as pd
-from flask import Flask, render_template, request
+from flask import Flask, render_template, request, jsonify
+from PIL import Image
+import io
+import base64
 import logging
 import os
-import base64
-import datetime
+from model_loader import CarPartsClassifier
 
-
+logging.basicConfig(level=logging.INFO)
 log = logging.getLogger('werkzeug')
 log.setLevel(logging.ERROR)
 
+logger = logging.getLogger(__name__)
+
 app = Flask(__name__)
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16 MB
+APP_NAME = "toiapartsrecognition"
+
+# Load model
+MODEL_URI = os.getenv('MODEL_URI', 'models:/toiapartsrecognition_model/Production')
+USE_MLFLOW = os.getenv('USE_MLFLOW', 'false').lower() == 'true'
+
+try:
+    if USE_MLFLOW:
+        classifier = CarPartsClassifier(model_path=MODEL_URI, use_mlflow=True)
+    else:
+        classifier = CarPartsClassifier(model_path=os.getenv('MODEL_PATH'))
+    logger.info(f"[{APP_NAME}] Model loaded successfully")
+except Exception as e:
+    logger.error(f"[{APP_NAME}] Failed to load model: {e}")
+    logger.warning("Falling back to base ResNet50 (untrained head)")
+    classifier = CarPartsClassifier()
+
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'webp'}
+
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 
 @app.route('/')
 def index():
     try:
-        return render_template('index.html')
+        return render_template('index.html', app_name=APP_NAME)
     except Exception as e:
         log.error(f"Error rendering index.html: {e}")
         return "Index file not found", 404
 
-@app.route('/hello')
-def hello_world():
-    chart_data = pd.DataFrame({'Apps': [x for x in range(30)],
-                               'Fun with data': [2 ** x for x in range(30)]})
-    return f'<h1>Hello, World!</h1> <p>Here is some fun data:</p> <pre>{chart_data.to_string(index=False)}</pre>'
 
-@app.route('/receiveimage', methods=['POST'])
-def receive_image():
-    data = request.get_json()
-    if not data or 'image' not in data:
-        return {'error': 'No image provided'}, 400
-    image_data = data['image'].split(',', 1)[1]
+@app.route('/health')
+def health():
+    return jsonify({
+        'app': APP_NAME,
+        'status': 'healthy',
+        'model_loaded': classifier is not None
+    })
+
+
+@app.route('/predict', methods=['POST'])
+def predict():
     try:
-        image_bytes = base64.b64decode(image_data)
+        if 'file' not in request.files:
+            return jsonify({'error': 'No file uploaded'}), 400
+
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': 'No file selected'}), 400
+
+        if not allowed_file(file.filename):
+            return jsonify({'error': 'Invalid file type. Use png, jpg, jpeg, or webp.'}), 400
+
+        # Read and process image
+        image_bytes = file.read()
+        image = Image.open(io.BytesIO(image_bytes)).convert('RGB')
+
+        # Make prediction
+        predictions = classifier.predict(image, top_k=3)
+
+        # Encode image preview
+        buffered = io.BytesIO()
+        preview = image.copy()
+        preview.thumbnail((400, 400))
+        preview.save(buffered, format='JPEG')
+        img_str = base64.b64encode(buffered.getvalue()).decode()
+
+        # Optional: log predictions as a DataFrame
+        df = pd.DataFrame(predictions)
+        logger.info(f"[{APP_NAME}] Predictions:\n{df}")
+
+        return jsonify({
+            'app': APP_NAME,
+            'predictions': predictions,
+            'image': f'data:image/jpeg;base64,{img_str}'
+        })
+
     except Exception as e:
-        return {'error': 'Invalid image data'}, 400
-    filename = f"images/received_image_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-    with open(filename, 'wb') as f:
-        f.write(image_bytes)
-    return {'message': 'Image saved', 'filename': filename}, 200
+        logger.exception("Prediction error")
+        return jsonify({'error': str(e)}), 500
 
 
+@app.route('/api/predict', methods=['POST'])
+def api_predict():
+    """JSON API endpoint for programmatic access (base64 input)."""
+    try:
+        data = request.get_json()
+        if not data or 'image' not in data:
+            return jsonify({'error': 'Missing base64 image data'}), 400
 
-@app.route('/receivenumbers', methods=['POST'])
-def receive_numbers():
-    data = request.get_json()
-    if not data or 'numro1' not in data or 'numro2' not in data:
-        return {'error': 'Missing numbers'}, 400
-    numro1 = data['numro1']
-    numro2 = data['numro2']
-    # Process the numbers (example: sum them)
-    result = int(numro1) + int(numro2)
-    return {'message': 'Numbers received', 'result': result}, 200
+        image_bytes = base64.b64decode(data['image'])
+        image = Image.open(io.BytesIO(image_bytes)).convert('RGB')
+        predictions = classifier.predict(image, top_k=data.get('top_k', 3))
+
+        return jsonify({'app': APP_NAME, 'predictions': predictions})
+
+    except Exception as e:
+        logger.exception("API prediction error")
+        return jsonify({'error': str(e)}), 500
+
 
 if __name__ == '__main__':
     host = os.getenv('FLASK_RUN_HOST', '0.0.0.0')
-    port = int(os.getenv('FLASK_RUN_PORT', 8000))
+    port = int(os.getenv('FLASK_RUN_PORT', os.getenv('DATABRICKS_APP_PORT', 8000)))
 
+    print(f"Flask app '{APP_NAME}' starting on http://{host}:{port}")
     app.run(debug=True, host=host, port=port)
-    print(f"Flask app running on http://{host}:{port}")
-
